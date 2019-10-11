@@ -1,4 +1,5 @@
-pragma solidity 0.5.11; /*
+pragma solidity 0.5.11; 
+/*
 
 ___________________________________________________________________
   _      _                                        ______           
@@ -25,7 +26,7 @@ __/__|____(___ _/___(___ _(___/_/_/__/_(___ _____/______(___/__o_o_
 ======================= Quick Stats ===================
     => Name        : EAT Token
     => Symbol      : EAT
-    => Total supply: 800,000,000,000 (800 Million)
+    => Total supply: 800,000,000 (800 Million)
     => Decimals    : 18
 
 
@@ -131,9 +132,10 @@ contract EAToken is owned {
     string constant public symbol = "EAT";
     uint256 constant public decimals = 18;
     uint256 public totalSupply = 800000000 * (10**decimals);   //800 million tokens
-    uint256 constant public maxSupply = 500000000 * (10**decimals);   //500 million tokens
+    uint256 constant public maxSupply = 800000000 * (10**decimals);   //800 million tokens
     bool public safeguard;  //putting safeguard on will halt all non-owner functions
     bool public tokenSwap;  //when tokenSwap will be on then all the token transfer to contract will trigger token swap
+	  uint256 constant private maxUintVal = 115792089237316195423570985008687907853269984665640564039457584007913129639935;
 
     // This creates a mapping with all data storage
     mapping (address => uint256) public balanceOf;
@@ -166,14 +168,14 @@ contract EAToken is owned {
     ======================================*/
 
     /* Internal transfer, only can be called by this contract */
-    function _transfer(address _from, address _to, uint _value) internal {
+    function _transfer(address _from, address _to, uint256 _value) internal {
         
         //checking conditions
         require(!safeguard);
         require (_to != address(0));                      // Prevent transfer to 0x0 address. Use burn() instead
         require(!frozenAccount[_from]);                     // Check if sender is frozen
         require(!frozenAccount[_to]);                       // Check if recipient is frozen
-        
+		    require(_value > 0 && _value < maxUintVal, "Invalid Token Amount");	        
         // overflow and undeflow checked by SafeMath Library
         balanceOf[_from] = balanceOf[_from].sub(_value);    // Subtract from the sender
         balanceOf[_to] = balanceOf[_to].add(_value);        // Add the same to the recipient
@@ -228,11 +230,18 @@ contract EAToken is owned {
         * @param _value the max amount they can spend
         */
     function approve(address _spender, uint256 _value) public returns (bool success) {
-        require(!safeguard);
-        require(balanceOf[msg.sender] >= _value, "Balance does not have enough tokens");
-        allowance[msg.sender][_spender] = _value;
-        emit Approval(msg.sender, _spender, _value);
+		    require(allowance[msg.sender][_spender] == 0, "Allowance already set. Please use increaseAllowance() and decreaseAllowance() functions to change the allowance.");
+		    _approve(msg.sender, _spender, _value);
         return true;
+    }
+
+    function _approve(address _sender, address _spender, uint256 _value) internal {
+        require(!safeguard);
+		    require(_value > 0 && _value < maxUintVal, "Invalid Token Amount");
+        require(balanceOf[_sender] >= _value, "Balance does not have enough tokens");
+		    require(_spender != address(0), "Please provide a valid spender address");
+        allowance[_sender][_spender] = _value;
+        emit Approval(_sender, _spender, _value);
     }
 
 
@@ -249,7 +258,7 @@ contract EAToken is owned {
     }
     
     function () external payable {
-      buyTokens();
+        buyTokens();
     }
 
     /**
@@ -261,6 +270,7 @@ contract EAToken is owned {
         */
     function burn(uint256 _value) public returns (bool success) {
         require(!safeguard);
+		    require(_value > 0 && _value < maxUintVal, "Invalid Token Amount");
         //checking of enough token balance is done by SafeMath
         balanceOf[msg.sender] = balanceOf[msg.sender].sub(_value);  // Subtract from the sender
         totalSupply = totalSupply.sub(_value);                      // Updates totalSupply
@@ -279,6 +289,7 @@ contract EAToken is owned {
         */
     function burnFrom(address _from, uint256 _value) public returns (bool success) {
         require(!safeguard);
+		    require(_value > 0 && _value < maxUintVal, "Invalid Token Amount");
         //checking of allowance and token value is done by SafeMath
         balanceOf[_from] = balanceOf[_from].sub(_value);                         // Subtract from the targeted balance
         allowance[_from][msg.sender] = allowance[_from][msg.sender].sub(_value); // Subtract from the sender's allowance
@@ -295,7 +306,7 @@ contract EAToken is owned {
         * @param freeze either to freeze it or not
         */
     function freezeAccount(address target, bool freeze) onlyOwner public {
-            frozenAccount[target] = freeze;
+        frozenAccount[target] = freeze;
         emit  FrozenAccounts(target, freeze);
     }
     
@@ -305,6 +316,7 @@ contract EAToken is owned {
         * @param mintedAmount the amount of tokens it will receive
         */
     function mintToken(address target, uint256 mintedAmount) onlyOwner public {
+		    require(mintedAmount > 0 && mintedAmount < maxUintVal, "Invalid Token Amount");
         require(totalSupply.add(mintedAmount) <= maxSupply, "Cannot Mint more than maximum supply");
         balanceOf[target] = balanceOf[target].add(mintedAmount);
         totalSupply = totalSupply.add(mintedAmount);
@@ -357,6 +369,25 @@ contract EAToken is owned {
         }
     }
     
+    function increaseAllowance(address spender, uint256 addedValue) public returns (bool) {
+    
+		require(addedValue > 0 && addedValue < maxUintVal, "Invalid Allowance Additional Amount");
+        uint256 newAmount = allowance[msg.sender][spender].add(addedValue);
+		    _approve(msg.sender, spender, newAmount);
+        
+        return true;
+    }
+    
+    function decreaseAllowance(address spender, uint256 subtractedValue) public returns (bool) {
+    
+		require(subtractedValue > 0 && subtractedValue < maxUintVal, "Invalid Allowance Reduction Amount");
+        uint256 newAmount = allowance[msg.sender][spender].sub(subtractedValue);
+        _approve(msg.sender, spender, newAmount);
+        
+        return true;
+    }
+
+
     /*************************************/
     /*    Section for User Air drop      */
     /*************************************/
@@ -375,6 +406,8 @@ contract EAToken is owned {
      * Admin must keep allocated tokens in the contract
      */
     function startNewPassiveAirDrop(uint256 passiveAirdropTokensAllocation_, uint256 airdropAmount_  ) public onlyOwner {
+		    require(passiveAirdropTokensAllocation_ > 0 && passiveAirdropTokensAllocation_ < maxUintVal, "Invalid Passive Airdrop Token Allocation Amount");
+		    require(airdropAmount_ > 0 && airdropAmount_ < maxUintVal, "Invalid Airdrop Amount");
         passiveAirdropTokensAllocation = passiveAirdropTokensAllocation_;
         airdropAmount = airdropAmount_;
         passiveAirdropStatus = true;
@@ -413,6 +446,7 @@ contract EAToken is owned {
      * This function allows admin to change the amount users will be getting while claiming air drop
      */
     function changePassiveAirdropAmount(uint256 newAmount) public onlyOwner{
+		    require(newAmount > 0 && newAmount < maxUintVal, "Invalid Airdrop Amount");
         airdropAmount = newAmount;
     }
     
@@ -433,6 +467,7 @@ contract EAToken is owned {
      * This function allows admin to update airdrop fee. He can put zero as well if no fee to be charged.
      */
     function updateAirdropFee(uint256 newFee) public onlyOwner{
+		    require(newFee > 0 && newFee < maxUintVal, "Invalid Airdrop Fee Value");
         airdropFee = newFee;
     }
     
@@ -515,6 +550,8 @@ contract EAToken is owned {
      * newBuyPrice Price users can buy from the contract
      */
     function setPrices(uint256 newSellPrice, uint256 newBuyPrice) onlyOwner public {
+		    require(newSellPrice > 0 && newSellPrice < maxUintVal, "Invalid Sell Price");
+		    require(newBuyPrice > 0 && newBuyPrice < maxUintVal, "Invalid Buy Price");
         sellPrice = newSellPrice;   //sellPrice is 1 Token = ?? WEI
         buyPrice = newBuyPrice;     //buyPrice is 1 ETH = ?? Tokens
     }
@@ -534,6 +571,7 @@ contract EAToken is owned {
      * amount amount of tokens to be sold
      */
     function sellTokens(uint256 amount) public {
+		    require(amount > 0 && amount < maxUintVal, "Invalid Amount");
         uint256 etherAmount = amount * sellPrice/(10**decimals);
         require(address(this).balance >= etherAmount);   // checks if the contract has enough ether to buy
         _transfer(msg.sender, address(this), amount);           // makes the transfers
