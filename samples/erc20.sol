@@ -428,7 +428,7 @@ contract EAToken is owned {
     uint256 public passiveAirdropTokensSold;
     mapping(uint256 => mapping(address => bool)) public airdropClaimed;
     uint256 internal airdropClaimedIndex;
-    uint256 public airdropFee = 0.05 ether;
+    uint256 public airdropFee = 0.05 * (1e18);
     
     /**
      * This function to start a passive air drop by admin only
