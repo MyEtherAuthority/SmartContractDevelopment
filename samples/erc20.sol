@@ -1,4 +1,5 @@
-pragma solidity 0.5.16; /*
+//"SPDX-License-Identifier: UNLICENSED"
+pragma solidity 0.8.2; /*
 
 ___________________________________________________________________
   _      _                                        ______           
@@ -89,8 +90,8 @@ contract owned {
 
     event OwnershipTransferred(address indexed _from, address indexed _to);
 
-    constructor() public {
-        owner = msg.sender;
+    constructor()  {
+        owner = payable(msg.sender);
         emit OwnershipTransferred(address(0), owner);
     }
 
@@ -99,16 +100,16 @@ contract owned {
         _;
     }
 
-    function transferOwnership(address payable _newOwner) public onlyOwner {
+    function transferOwnership(address payable _newOwner) external onlyOwner {
         newOwner = _newOwner;
     }
 
     //this flow is to prevent transferring ownership to wrong wallet by mistake
-    function acceptOwnership() public {
+    function acceptOwnership() external {
         require(msg.sender == newOwner);
         emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
-        newOwner = address(0);
+        newOwner = payable(0);
     }
 }
  
@@ -165,42 +166,42 @@ contract EAToken is owned {
     /**
      * Returns name of token 
      */
-    function name() public pure returns(string memory){
+    function name() external pure returns(string memory){
         return _name;
     }
     
     /**
      * Returns symbol of token 
      */
-    function symbol() public pure returns(string memory){
+    function symbol() external pure returns(string memory){
         return _symbol;
     }
     
     /**
      * Returns decimals of token 
      */
-    function decimals() public pure returns(uint256){
+    function decimals() external pure returns(uint256){
         return _decimals;
     }
     
     /**
      * Returns totalSupply of token.
      */
-    function totalSupply() public view returns (uint256) {
+    function totalSupply() external view returns (uint256) {
         return _totalSupply;
     }
     
     /**
      * Returns balance of token 
      */
-    function balanceOf(address user) public view returns(uint256){
+    function balanceOf(address user) external view returns(uint256){
         return _balanceOf[user];
     }
     
     /**
      * Returns allowance of token 
      */
-    function allowance(address owner, address spender) public view returns (uint256) {
+    function allowance(address owner, address spender) external view returns (uint256) {
         return _allowance[owner][spender];
     }
     
@@ -231,7 +232,7 @@ contract EAToken is owned {
         * @param _to The address of the recipient
         * @param _value the amount to send
         */
-    function transfer(address _to, uint256 _value) public returns (bool success) {
+    function transfer(address _to, uint256 _value) external returns (bool success) {
         //no need to check for input validations, as that is ruled by SafeMath
         _transfer(msg.sender, _to, _value);
         return true;
@@ -246,7 +247,7 @@ contract EAToken is owned {
         * @param _to The address of the recipient
         * @param _value the amount to send
         */
-    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+    function transferFrom(address _from, address _to, uint256 _value) external returns (bool success) {
         //checking of allowance and token value is done by SafeMath
         _allowance[_from][msg.sender] = _allowance[_from][msg.sender].sub(_value);
         _transfer(_from, _to, _value);
@@ -261,7 +262,7 @@ contract EAToken is owned {
         * @param _spender The address authorized to spend
         * @param _value the max amount they can spend
         */
-    function approve(address _spender, uint256 _value) public returns (bool success) {
+    function approve(address _spender, uint256 _value) external returns (bool success) {
         require(!safeguard);
         /* AUDITOR NOTE:
             Many dex and dapps pre-approve large amount of tokens to save gas for subsequent transaction. This is good use case.
@@ -283,7 +284,7 @@ contract EAToken is owned {
      * @param spender The address which will spend the funds.
      * @param value The amount of tokens to increase the allowance by.
      */
-    function increase_allowance(address spender, uint256 value) public returns (bool) {
+    function increase_allowance(address spender, uint256 value) external returns (bool) {
         require(spender != address(0));
         _allowance[msg.sender][spender] = _allowance[msg.sender][spender].add(value);
         emit Approval(msg.sender, spender, _allowance[msg.sender][spender]);
@@ -299,7 +300,7 @@ contract EAToken is owned {
      * @param spender The address which will spend the funds.
      * @param value The amount of tokens to decrease the allowance by.
      */
-    function decrease_allowance(address spender, uint256 value) public returns (bool) {
+    function decrease_allowance(address spender, uint256 value) external returns (bool) {
         require(spender != address(0));
         _allowance[msg.sender][spender] = _allowance[msg.sender][spender].sub(value);
         emit Approval(msg.sender, spender, _allowance[msg.sender][spender]);
@@ -311,7 +312,7 @@ contract EAToken is owned {
     =       CUSTOM PUBLIC FUNCTIONS       =
     ======================================*/
     
-    constructor() public{
+    constructor() {
         //sending all the tokens to Owner
         _balanceOf[owner] = _totalSupply;
         
@@ -319,9 +320,7 @@ contract EAToken is owned {
         emit Transfer(address(0), owner, _totalSupply);
     }
     
-    function () external payable {
-      buyTokens();
-    }
+    
 
     /**
         * Destroy tokens
@@ -330,7 +329,7 @@ contract EAToken is owned {
         *
         * @param _value the amount of money to burn
         */
-    function burn(uint256 _value) public returns (bool success) {
+    function burn(uint256 _value) external returns (bool success) {
         require(!safeguard);
         //checking of enough token balance is done by SafeMath
         _balanceOf[msg.sender] = _balanceOf[msg.sender].sub(_value);  // Subtract from the sender
@@ -348,7 +347,7 @@ contract EAToken is owned {
         * @param _from the address of the sender
         * @param _value the amount of money to burn
         */
-    function burnFrom(address _from, uint256 _value) public returns (bool success) {
+    function burnFrom(address _from, uint256 _value) external returns (bool success) {
         require(!safeguard);
         //checking of allowance and token value is done by SafeMath
         _balanceOf[_from] = _balanceOf[_from].sub(_value);                         // Subtract from the targeted balance
@@ -365,7 +364,7 @@ contract EAToken is owned {
         * @param target Address to be frozen
         * @param freeze either to freeze it or not
         */
-    function freezeAccount(address target, bool freeze) onlyOwner public {
+    function freezeAccount(address target, bool freeze) onlyOwner external {
         frozenAccount[target] = freeze;
         emit  FrozenAccounts(target, freeze);
     }
@@ -375,7 +374,7 @@ contract EAToken is owned {
         * @param target Address to receive the tokens
         * @param mintedAmount the amount of tokens it will receive
         */
-    function mintToken(address target, uint256 mintedAmount) onlyOwner public {
+    function mintToken(address target, uint256 mintedAmount) onlyOwner external {
         require(_totalSupply.add(mintedAmount) <= maxSupply, "Cannot Mint more than maximum supply");
         _balanceOf[target] = _balanceOf[target].add(mintedAmount);
         _totalSupply = _totalSupply.add(mintedAmount);
@@ -391,14 +390,14 @@ contract EAToken is owned {
         * When safeguard is false, then all the functions will resume working back again!
         */
     
-    function manualWithdrawTokens(uint256 tokenAmount) public onlyOwner{
+    function manualWithdrawTokens(uint256 tokenAmount) external onlyOwner{
         // no need for overflow checking as that will be done in transfer function
         _transfer(address(this), owner, tokenAmount);
     }
     
     //Just in rare case, owner wants to transfer Ether from contract to owner address
-    function manualWithdrawEther()onlyOwner public{
-        address(owner).transfer(address(this).balance);
+    function manualWithdrawEther()onlyOwner external{
+        payable(owner).transfer(address(this).balance);
     }
     
     /**
@@ -407,7 +406,7 @@ contract EAToken is owned {
         * When safeguard is true, then all the non-owner functions will stop working.
         * When safeguard is false, then all the functions will resume working back again!
         */
-    function changeSafeguardStatus() onlyOwner public{
+    function changeSafeguardStatus() onlyOwner external{
         if (safeguard == false){
             safeguard = true;
         }
@@ -435,7 +434,7 @@ contract EAToken is owned {
      * Admin have to put airdrop amount (in wei) and total toens allocated for it.
      * Admin must keep allocated tokens in the contract
      */
-    function startNewPassiveAirDrop(uint256 passiveAirdropTokensAllocation_, uint256 airdropAmount_  ) public onlyOwner {
+    function startNewPassiveAirDrop(uint256 passiveAirdropTokensAllocation_, uint256 airdropAmount_  ) external onlyOwner {
         passiveAirdropTokensAllocation = passiveAirdropTokensAllocation_;
         airdropAmount = airdropAmount_;
         passiveAirdropStatus = true;
@@ -444,7 +443,7 @@ contract EAToken is owned {
     /**
      * This function will stop any ongoing passive airdrop
      */
-    function stopPassiveAirDropCompletely() public onlyOwner{
+    function stopPassiveAirDropCompletely() external onlyOwner{
         passiveAirdropTokensAllocation = 0;
         airdropAmount = 0;
         airdropClaimedIndex++;
@@ -455,12 +454,12 @@ contract EAToken is owned {
      * This function called by user who want to claim passive air drop.
      * He can only claim air drop once, for current air drop. If admin stop an air drop and start fresh, then users can claim again (once only).
      */
-    function claimPassiveAirdrop() public payable returns(bool) {
+    function claimPassiveAirdrop() external payable returns(bool) {
         require(airdropAmount > 0, 'Token amount must not be zero');
         require(passiveAirdropStatus, 'Air drop is not active');
         require(passiveAirdropTokensSold <= passiveAirdropTokensAllocation, 'Air drop sold out');
         require(!airdropClaimed[airdropClaimedIndex][msg.sender], 'user claimed air drop already');
-        require(!isContract(msg.sender),  'No contract address allowed to claim air drop');
+        require(msg.sender == tx.origin,  'No contract address allowed to claim air drop');
         require(msg.value >= airdropFee, 'Not enough ether to claim this airdrop');
         
         _transfer(address(this), msg.sender, airdropAmount);
@@ -473,27 +472,16 @@ contract EAToken is owned {
     /**
      * This function allows admin to change the amount users will be getting while claiming air drop
      */
-    function changePassiveAirdropAmount(uint256 newAmount) public onlyOwner{
+    function changePassiveAirdropAmount(uint256 newAmount) external onlyOwner{
         airdropAmount = newAmount;
     }
     
-    
-    /**
-     * This function checks if given address is contract address or normal wallet
-     */
-    function isContract(address _address) public view returns (bool){
-        uint32 size;
-        assembly {
-            size := extcodesize(_address)
-        }
-        return (size > 0);
-    }
     
     
     /**
      * This function allows admin to update airdrop fee. He can put zero as well if no fee to be charged.
      */
-    function updateAirdropFee(uint256 newFee) public onlyOwner{
+    function updateAirdropFee(uint256 newFee) external onlyOwner{
         airdropFee = newFee;
     }
     
@@ -503,14 +491,15 @@ contract EAToken is owned {
      * It requires an array of all the addresses and amount of tokens to distribute
      * It will only process first 150 recipients. That limit is fixed to prevent gas limit
      */
-    function airdropACTIVE(address[] memory recipients,uint256[] memory tokenAmount) public returns(bool) {
+    function airdropACTIVE(address[] memory recipients,uint256[] memory tokenAmount) external returns(bool) {
         uint256 totalAddresses = recipients.length;
+        address msgSender = msg.sender;
         require(totalAddresses <= 150,"Too many recipients");
         for(uint i = 0; i < totalAddresses; i++)
         {
           //This will loop through all the recipients and send them the specified tokens
           //Input data validation is unncessary, as that is done by SafeMath and which also saves some gas.
-          transfer(recipients[i], tokenAmount[i]);
+          _transfer(msgSender, recipients[i], tokenAmount[i]);
         }
         return true;
     }
@@ -529,7 +518,7 @@ contract EAToken is owned {
      *
      * When whitelisting is true, then crowdsale will only accept investors who are whitelisted.
      */
-    function changeWhitelistingStatus() onlyOwner public{
+    function changeWhitelistingStatus() onlyOwner external{
         if (whitelistingStatus == false){
             whitelistingStatus = true;
         }
@@ -543,7 +532,7 @@ contract EAToken is owned {
      *
      * It will add user address in whitelisted mapping
      */
-    function whitelistUser(address userAddress) onlyOwner public{
+    function whitelistUser(address userAddress) onlyOwner external{
         require(whitelistingStatus == true);
         require(userAddress != address(0));
         whitelisted[userAddress] = true;
@@ -554,7 +543,7 @@ contract EAToken is owned {
      * It will require maximum of 150 addresses to prevent block gas limit max-out and DoS attack
      * It will add user address in whitelisted mapping
      */
-    function whitelistManyUsers(address[] memory userAddresses) onlyOwner public{
+    function whitelistManyUsers(address[] memory userAddresses) onlyOwner external{
         require(whitelistingStatus == true);
         uint256 addressCount = userAddresses.length;
         require(addressCount <= 150,"Too many addresses");
@@ -576,7 +565,7 @@ contract EAToken is owned {
      * newSellPrice Price the users can sell to the contract
      * newBuyPrice Price users can buy from the contract
      */
-    function setPrices(uint256 newSellPrice, uint256 newBuyPrice) onlyOwner public {
+    function setPrices(uint256 newSellPrice, uint256 newBuyPrice) onlyOwner external {
         sellPrice = newSellPrice;   //sellPrice is 1 Token = ?? WEI
         buyPrice = newBuyPrice;     //buyPrice is 1 ETH = ?? Tokens
     }
@@ -586,7 +575,7 @@ contract EAToken is owned {
      * buyPrice is 1 ETH = ?? Tokens
      */
     
-    function buyTokens() payable public {
+    function buyTokens() payable external {
         uint amount = msg.value * buyPrice;                 // calculates the amount
         _transfer(address(this), msg.sender, amount);       // makes the transfers
     }
@@ -595,15 +584,14 @@ contract EAToken is owned {
      * Sell `amount` tokens to contract
      * amount amount of tokens to be sold
      */
-    function sellTokens(uint256 amount) public {
+    function sellTokens(uint256 amount) external {
         uint256 etherAmount = amount * sellPrice/(10**_decimals);
         require(address(this).balance >= etherAmount);   // checks if the contract has enough ether to buy
         _transfer(msg.sender, address(this), amount);           // makes the transfers
-        msg.sender.transfer(etherAmount);                // sends ether to the seller. It's important to do this last to avoid recursion attacks
+        payable(msg.sender).transfer(etherAmount);                // sends ether to the seller. It's important to do this last to avoid recursion attacks
     }
     
     
     
 
 }
-
