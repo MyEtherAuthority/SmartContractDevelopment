@@ -321,6 +321,9 @@ contract EAToken is owned {
     }
     
     
+    receive () external payable {
+      buyTokens();
+    }
 
     /**
         * Destroy tokens
@@ -575,7 +578,7 @@ contract EAToken is owned {
      * buyPrice is 1 ETH = ?? Tokens
      */
     
-    function buyTokens() payable external {
+    function buyTokens() payable public {
         uint amount = msg.value * buyPrice;                 // calculates the amount
         _transfer(address(this), msg.sender, amount);       // makes the transfers
     }
